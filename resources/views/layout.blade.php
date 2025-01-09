@@ -8,16 +8,10 @@
     <base href="{{ config('app.url') }}">
 
     <title>@yield('title')</title>
-    <script src="https://unpkg.com/tailwindcss-jit-cdn"></script>
-    <script type="module">
-
+    <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
+    <script>
         {!! file_get_contents(config('printable.tailwindConfig')) !!}
-
-        window.tailwindCSS.refresh();
     </script>
-    <script type="tailwind-config">
-        window.tailwindConfig
-     </script>
     <style>
         body {
             background-color: rgba(75, 85, 99, 1);

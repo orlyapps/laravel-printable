@@ -1,7 +1,4 @@
-import tailwindcssTypography from "https://cdn.skypack.dev/@tailwindcss/typography";
-
-window.tailwindConfig = {
-    plugins: [tailwindcssTypography],
+tailwind.config  = {
     theme: {
         fontFamily: {
             sans: "Arial, sans-serif",

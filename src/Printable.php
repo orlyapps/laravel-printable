@@ -11,11 +11,15 @@ trait Printable
         return resource_path('pdf/stationery.pdf');
     }
 
+    public function printContext()
+    {
+        return [];
+    }
+
     public function printView()
     {
         return null;
     }
-
 
     public function browsershot($shot)
     {

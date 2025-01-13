@@ -2,6 +2,7 @@
 
 namespace Orlyapps\Printable;
 
+use Illuminate\Support\Facades\Context;
 use setasign\Fpdi\Fpdi;
 use setasign\Fpdi\PdfParser\StreamReader;
 use Spatie\Browsershot\Browsershot;
@@ -98,11 +99,13 @@ class PrintModel
         $view = $this->model->printView() ?? "print.{$this->modelShortName}.layout";
         $templateName = "{$view}-{$this->layout}";
 
+        Context::add('printContext', $this->model->printContext());
+
         return  (string) view($templateName, array_merge([
             $this->modelShortName => $this->model,
             'model' => $this->model,
             'user' => $this->user,
-        ], $this->meta));
+        ], $this->meta, $this->model->printContext()));
     }
 
     public function save()
@@ -113,6 +116,7 @@ class PrintModel
 
         $filename = storage_path('printable/'.uniqid(rand(), true).'.pdf');
         $templateString = $this->asHTML();
+
 
         if ($this->model->lambda()) {
             $shot = BrowsershotLambda::html($templateString);
@@ -131,7 +135,7 @@ class PrintModel
             ->noSandbox()
             ->waitUntilNetworkIdle(false)
             ->delay(2000)
-            ->timeout(5);
+            ->timeout(60);
 
         $shot = $this->model->browsershot($shot);
 

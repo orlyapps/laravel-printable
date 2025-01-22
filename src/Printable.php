@@ -26,9 +26,9 @@ trait Printable
         return $shot;
     }
 
-    public function lambda()
+    public function driver()
     {
-        return false;
+        return 'gotenberg';
     }
 
     public function print()

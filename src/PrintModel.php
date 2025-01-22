@@ -2,12 +2,14 @@
 
 namespace Orlyapps\Printable;
 
+use Gotenberg\Gotenberg;
 use Illuminate\Support\Facades\Context;
 use setasign\Fpdi\Fpdi;
 use setasign\Fpdi\PdfParser\StreamReader;
 use Spatie\Browsershot\Browsershot;
 use Symfony\Component\Process\Process;
 use Wnx\SidecarBrowsershot\BrowsershotLambda;
+use Gotenberg\Stream;
 
 class PrintModel
 {
@@ -117,12 +119,50 @@ class PrintModel
         $filename = storage_path('printable/'.uniqid(rand(), true).'.pdf');
         $templateString = $this->asHTML();
 
+        $filename = match($this->model->driver()) {
+            'gotenberg' => $this->saveWithGotenberg($templateString),
+            'lambda' => $this->saveWithLambda($templateString),
+            'browsershot' => $this->saveWithBrowsershot($templateString),
+            default => throw new \Exception('Invalid print driver specified'),
+        };
 
-        if ($this->model->lambda()) {
-            $shot = BrowsershotLambda::html($templateString);
-        } else {
-            $shot = Browsershot::html($templateString);
+        $filename = $this->applyStationeryAndWatermark($filename);
+
+        if ($this->PDFA) {
+            return $this->convertToPDFa($filename);
         }
+
+        return $filename;
+    }
+
+    protected function saveWithGotenberg($templateString)
+    {
+        $filename =  Gotenberg::save(
+            Gotenberg::chromium('http://orlyapps:rocks1337@167.235.253.43:3000/')
+                ->pdf()
+                ->margins('0mm', '0mm', '0mm', '0mm')
+                ->paperSize('210mm', '297mm')
+                ->html(Stream::string('index.html', $templateString)),
+            storage_path('printable')
+        );
+        return storage_path('printable/'.basename($filename));
+    }
+
+    protected function saveWithLambda($templateString)
+    {
+        $shot = BrowsershotLambda::html($templateString);
+        return $this->configureBrowsershot($shot);
+    }
+
+    protected function saveWithBrowsershot($templateString)
+    {
+        $shot = Browsershot::html($templateString);
+        return $this->configureBrowsershot($shot);
+    }
+
+    protected function configureBrowsershot($shot)
+    {
+        $filename = storage_path('printable/'.uniqid(rand(), true).'.pdf');
 
         $shot->showBrowserHeaderAndFooter()
             ->hideFooter()
@@ -144,7 +184,11 @@ class PrintModel
         }
 
         $shot->savePdf($filename);
+        return $filename;
+    }
 
+    protected function applyStationeryAndWatermark($sourceFilename)
+    {
         $pdf = new Fpdi();
         $pdf->setSourceFile(StreamReader::createByString(file_get_contents($this->stationeryPdf)));
 
@@ -157,10 +201,9 @@ class PrintModel
         }
 
         $pdf->setSourceFile(resource_path('pdf/watermark-preview.pdf'));
-
         $watermarkPage = $pdf->importPage(1);
 
-        $pageCount = $pdf->setSourceFile($filename);
+        $pageCount = $pdf->setSourceFile($sourceFilename);
         for ($i = 1; $i <= $pageCount; $i++) {
             $pdf->AddPage();
             $template = ($i === 1 || $pageBackground === null) ? $coverBackground : $pageBackground;
@@ -172,7 +215,6 @@ class PrintModel
                 $pdf->useTemplate($template);
             }
 
-            // Preview Watermark
             if ($this->watermark) {
                 $pdf->useTemplate($watermarkPage);
             }
@@ -181,20 +223,13 @@ class PrintModel
                 $pdf->SetFont('Arial', '', 8);
                 $pdf->SetTextColor(74, 85, 104);
                 $pdf->SetXY(20.8, 37);
-
                 $pdf->Write(0, iconv('UTF-8', 'ISO-8859-1//IGNORE', $this->model->printTitle));
             }
         }
 
-        // Reines PDF von Browsershot lösen und das neue zusammengeführte PDF verwenden
-        unlink($filename);
+        unlink($sourceFilename);
         $filename = storage_path('printable/'.uniqid(rand(), true).'.pdf');
-
         $pdf->Output('F', $filename);
-
-        if ($this->PDFA) {
-            return $this->convertToPDFa($filename);
-        }
 
         return $filename;
     }

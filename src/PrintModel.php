@@ -138,11 +138,10 @@ class PrintModel
     protected function saveWithGotenberg($templateString)
     {
         $url = config('printable.gotenberg.url');
-        $username = config('printable.gotenberg.username');
-        $password = config('printable.gotenberg.password');
+
 
         $filename =  Gotenberg::save(
-            Gotenberg::chromium("{$username}:{$password}@" . trim($url, '/') . '/')
+            Gotenberg::chromium($url)
                 ->pdf()
                 ->margins('0mm', '0mm', '0mm', '0mm')
                 ->paperSize('210mm', '297mm')

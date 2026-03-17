@@ -139,17 +139,28 @@ class PrintModel
     {
         $url = config('printable.gotenberg.url');
 
+        $pageNumberHtml = '<div style="padding-top:15mm;padding-right: 15mm;color: #718096;font-size:12px;text-align:right;width:100%"><span class="pageNumber"></span> / <span class="totalPages"></span> </div>';
 
-        $filename =  Gotenberg::save(
-            Gotenberg::chromium($url)
-                ->pdf()
-                ->header(Stream::string('header.html', '<div style="padding-top:15mm;padding-right: 15mm;color: #718096;font-size:12px;text-align:right;width:100%"><span  class="pageNumber"></span> / <span class="totalPages"></span> </div>'))
-                ->margins('0mm', '0mm', '0mm', '0mm')
-                ->paperSize('210mm', '297mm')
+        $request = Gotenberg::chromium($url)
+            ->pdf()
+            ->margins('0mm', '0mm', '0mm', '0mm')
+            ->paperSize('210mm', '297mm');
 
-                ->html(Stream::string('index.html', $templateString)),
+        if ($this->numberOfPages) {
+            $position = config('printable.page_number_position', 'header');
+
+            if ($position === 'footer') {
+                $request = $request->footer(Stream::string('footer.html', $pageNumberHtml));
+            } else {
+                $request = $request->header(Stream::string('header.html', $pageNumberHtml));
+            }
+        }
+
+        $filename = Gotenberg::save(
+            $request->html(Stream::string('index.html', $templateString)),
             storage_path('printable')
         );
+
         return storage_path('printable/'.basename($filename));
     }
 
@@ -185,7 +196,14 @@ class PrintModel
         $shot = $this->model->browsershot($shot);
 
         if ($this->numberOfPages) {
-            $shot->headerHtml('<div style="padding-top:15mm;padding-right: 15mm;color: #718096;font-size:12px;text-align:right;width:100%"><span  class="pageNumber"></span> / <span class="totalPages"></span> </div>');
+            $pageNumberHtml = '<div style="padding-top:15mm;padding-right: 15mm;color: #718096;font-size:12px;text-align:right;width:100%"><span class="pageNumber"></span> / <span class="totalPages"></span> </div>';
+            $position = config('printable.page_number_position', 'header');
+
+            if ($position === 'footer') {
+                $shot->footerHtml($pageNumberHtml);
+            } else {
+                $shot->headerHtml($pageNumberHtml);
+            }
         }
 
         $shot->savePdf($filename);

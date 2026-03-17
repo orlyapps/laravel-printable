@@ -143,8 +143,10 @@ class PrintModel
         $filename =  Gotenberg::save(
             Gotenberg::chromium($url)
                 ->pdf()
+                ->header(Stream::string('header.html', '<div style="padding-top:15mm;padding-right: 15mm;color: #718096;font-size:12px;text-align:right;width:100%"><span  class="pageNumber"></span> / <span class="totalPages"></span> </div>'))
                 ->margins('0mm', '0mm', '0mm', '0mm')
                 ->paperSize('210mm', '297mm')
+
                 ->html(Stream::string('index.html', $templateString)),
             storage_path('printable')
         );
